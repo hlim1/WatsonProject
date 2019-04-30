@@ -86,6 +86,9 @@ public class Watson
     private Wiki_Page wikiPage = new Wiki_Page();
     private static RunningTime runningTime = new RunningTime();
 
+    // An array list of Part-of-Speech tags, which I will only considers important and extract from the contents
+    private static ArrayList<String> posTags = new ArrayList<>(Arrays.asList("NN", "NNS", "NNP", "NNPS", "VB", "VBN", "VBP", "VBD", "VBZ", "JJ"));
+
     public static void main( String[] args ) throws java.io.FileNotFoundException,java.io.IOException, ParseException, java.net.URISyntaxException
     {
         // Initializing the running times of each operation to 0 at the beginning of the program.
@@ -107,30 +110,33 @@ public class Watson
         // Tokenize and lemmatize each search query
         questions = watson.LemmatizeQuestions(questionsFile); 
       
+        File[] wikiFiles;
+        ArrayList<Wiki_Page> wikiPages = new ArrayList<>();
+
+        // Get wikipedia files
+        wikiFiles = watson.getWikiFiles();
+        System.out.printf("%d wiki files retrieved.\n", wikiFiles.length);
+
         // The commented out code stub is for lemmatizing and indexing. Since both operations
         // are already completed and stored on disk, they are not necessary to re-run. Though,
         // it's needed for any future work and record, I'm leaving it in here rather than removing it
         /* ******************************************************************************************
-            File[] wikiFiles;
-            ArrayList<Wiki_Page> wikiPages = new ArrayList<>();
-
-            // Get wikipedia files
-            wikiFiles = watson.getWikiFiles();
-            System.out.printf("%d wiki files retrieved.\n", wikiFiles.length);
-
-            // Tokenize and lemmatize each wiki page's content and store it into wiki page list
-            wikiPages = watson.lemmatizeWikiPages(wikiFiles);
-            watson.addLemmatizedDocsToFile(wikiPages);
-
-            // Tokenize and lemmatize each search query
-            questions = watson.LemmatizeQuestions(questionsFile); 
-         
-            // File lemmatizedFile = watson.getFile("LemmatizedWikiPages.txt"); 
-            wikiPages = watson.retrieveLammatizedWiki(lemmatizedFile);
-
-            // Index each lemmatized wiki page
-            watson.IndexDocuments(wikiPages);
         **********************************************************************************************/
+
+        // Tokenize and lemmatize each wiki page's content and store it into wiki page list
+        wikiPages = watson.lemmatizeWikiPages(wikiFiles);
+
+        watson.addLemmatizedDocsToFile(wikiPages);
+
+        // Tokenize and lemmatize each search query
+        questions = watson.LemmatizeQuestions(questionsFile); 
+     
+        // File lemmatizedFile = watson.getFile("LemmatizedWikiPages.txt"); 
+        wikiPages = watson.retrieveLammatizedWiki(lemmatizedFile);
+
+        // Index each lemmatized wiki page
+        watson.IndexDocuments(wikiPages);
+        //============================================================================================
         HashMap<String, Double> positions = new HashMap<>();
         IndexSearcher searcher = createSearcher();
 
@@ -224,7 +230,12 @@ public class Watson
                             {
                                 for (CoreLabel token : sentence.get(TokensAnnotation.class))
                                 {
-                                    lemmas += (token.get(LemmaAnnotation.class) + " ");
+                                    // Construct a new string of lemmas only based on the POS tags that I considers imortant
+                                    String pos = token.get(PartOfSpeechAnnotation.class);
+                                    if (posTags.contains(pos))
+                                    {
+                                        lemmas += (token.get(LemmaAnnotation.class) + " ");
+                                    }
                                 }
                             }
                             String cleanedLemma = lemmas.replaceAll("[^\\p{IsAlphabetic}^\\p{IsDigit}]", " ");
@@ -250,6 +261,8 @@ public class Watson
                             content += line;
                     }
                 }
+                // REMOVE
+                break;
             }
             catch (IOException e)
             {
