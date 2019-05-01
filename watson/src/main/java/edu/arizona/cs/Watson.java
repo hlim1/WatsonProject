@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 // Lucene classes
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -88,6 +89,7 @@ public class Watson
 
     // An array list of Part-of-Speech tags, which I will only considers important and extract from the contents
     private static ArrayList<String> posTags = new ArrayList<>(Arrays.asList("NN", "NNS", "NNP", "NNPS", "VB", "VBN", "VBP", "VBD", "VBZ", "JJ"));
+    private static ArrayList<String> nerTags = new ArrayList<>(Arrays.asList("PERSON", "LOCATION", "ORGANIZATION", "MISC", "NUMBER", "DATE", "TIME", "DURATION", "SET"));
 
     public static void main( String[] args ) throws java.io.FileNotFoundException,java.io.IOException, ParseException, java.net.URISyntaxException
     {
@@ -121,8 +123,6 @@ public class Watson
         // are already completed and stored on disk, they are not necessary to re-run. Though,
         // it's needed for any future work and record, I'm leaving it in here rather than removing it
         /* ******************************************************************************************
-        **********************************************************************************************/
-
         // Tokenize and lemmatize each wiki page's content and store it into wiki page list
         wikiPages = watson.lemmatizeWikiPages(wikiFiles);
 
@@ -131,24 +131,24 @@ public class Watson
         // Tokenize and lemmatize each search query
         questions = watson.LemmatizeQuestions(questionsFile); 
      
-        // File lemmatizedFile = watson.getFile("LemmatizedWikiPages.txt"); 
+        File lemmatizedFile = watson.getFile("LemmatizedWikiPages.txt"); 
         wikiPages = watson.retrieveLammatizedWiki(lemmatizedFile);
 
         // Index each lemmatized wiki page
         watson.IndexDocuments(wikiPages);
-        //============================================================================================
+        **********************************************************************************************/
         HashMap<String, Double> positions = new HashMap<>();
         IndexSearcher searcher = createSearcher();
 
         int numberCorrectlyFound = watson.query(searcher, questions, positions);
-        double accuracy = ((double)numberCorrectlyFound / NUMBER_OF_Q) * 100;
+        double correctness = ((double)numberCorrectlyFound / NUMBER_OF_Q) * 100;
         double mrr = watson.MRR(positions);
 
         // Prints MRR and accuracy of querying
         System.out.println("=======================================================");
         System.out.println("Measurements:");
         System.out.printf("MRR: %.2f.\n", mrr);
-        System.out.printf("The accuracy: %.2f%%\n", accuracy);
+        System.out.printf("The correctness: %.2f%%\n", correctness);
         
         // Prints processing time for each main functionalities of the program 
         System.out.println("=======================================================");
@@ -232,7 +232,8 @@ public class Watson
                                 {
                                     // Construct a new string of lemmas only based on the POS tags that I considers imortant
                                     String pos = token.get(PartOfSpeechAnnotation.class);
-                                    if (posTags.contains(pos))
+                                    String ner = token.get(NamedEntityTagAnnotation.class);
+                                    if (posTags.contains(pos) && nerTags.contains(ner))
                                     {
                                         lemmas += (token.get(LemmaAnnotation.class) + " ");
                                     }
@@ -261,8 +262,6 @@ public class Watson
                             content += line;
                     }
                 }
-                // REMOVE
-                break;
             }
             catch (IOException e)
             {
@@ -403,7 +402,7 @@ public class Watson
     private static IndexWriter createWriter() throws IOException
     {
         FSDirectory dir = FSDirectory.open(Paths.get(INDEX_DIR));
-        IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+        IndexWriterConfig config = new IndexWriterConfig(new WhitespaceAnalyzer());
         IndexWriter writer = new IndexWriter(dir, config);
 
         return writer;
