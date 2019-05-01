@@ -198,7 +198,7 @@ public class Watson
         String content = "";
 
         Properties props = new Properties();
-        props.setProperty("annotators", "tokenize, ssplit, pos, lemma");
+        props.setProperty("LemmaAnnotators", "tokenize, ssplit, pos, lemma, ner");
         StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
 
         System.out.println("Begin tokenizing and lemmatizing wiki pages...");
