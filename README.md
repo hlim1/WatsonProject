@@ -1,7 +1,7 @@
 # WatsonProject
 CSC 583 Project #1: Partial Watson Development
 
-#How to compile and run the program:
+How to compile and run the program:
 
 (1) Download the index from the link:
     https://drive.google.com/drive/folders/1a-evEc2HC24E1JCbhhIyy4H5KQQRT-DX?usp=sharing
